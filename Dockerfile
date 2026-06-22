@@ -5,5 +5,5 @@ RUN npm install --only=production
 COPY . .
 EXPOSE 3000
 CMD ["node", "app.js"]
-ubuntu@ip-172-31-32-58:~/latest-app$
+
 
