@@ -1,0 +1,63 @@
+{{- if .Values.backup.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-postgres-backup  # 👈 FIXED: Changed from include to built-in variable
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: postgres-backup
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: {{ .Values.backup.historyLimit.success }}
+  failedJobsHistoryLimit: {{ .Values.backup.historyLimit.failed }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: {{ .Release.Name }}-postgres-backup-sa
+          containers:
+          - name: db-backup
+            image: {{ .Values.backup.image }}
+            env:
+              - name: PGHOST
+                valueFrom:
+                  configMapKeyRef:
+                    name: app-config
+                    key: DB_HOST
+              - name: PGUSER
+                valueFrom:
+                  configMapKeyRef:
+                    name: app-config
+                    key: DB_USER
+              - name: PGDATABASE
+                valueFrom:
+                  configMapKeyRef:
+                    name: app-config
+                    key: DB_NAME
+              - name: PGPASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: app-secret
+                    key: DB_PASSWORD
+              
+              # AWS Settings driven by values.yaml
+              - name: S3_BUCKET
+                value: {{ .Values.backup.s3Bucket | quote }}
+              - name: AWS_DEFAULT_REGION
+                value: {{ .Values.backup.region | quote }}
+            command: ["/bin/sh", "-c"]
+            args:
+              - |
+                set -e
+                BACKUP_FILE="backup-$(date +%Y%m%d-%H%M%S).sql.gz"
+                echo "Starting database dump from host ${PGHOST}..."
+                
+                pg_dump -h "${PGHOST}" -U "${PGUSER}" -d "${PGDATABASE}" | gzip > /tmp/${BACKUP_FILE}
+                
+                echo "Uploading ${BACKUP_FILE} to S3 bucket ${S3_BUCKET}..."
+                aws s3 cp /tmp/${BACKUP_FILE} "s3://${S3_BUCKET}/db-backups/${BACKUP_FILE}"
+                
+                echo "Backup successfully uploaded!"
+          restartPolicy: OnFailure
+{{- end }}

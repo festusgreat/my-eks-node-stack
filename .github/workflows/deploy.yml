@@ -1,0 +1,58 @@
+name: CI/CD Build and Deploy
+
+on:
+  push:
+    branches:
+      - main # 👈 Triggers the pipeline every time you push code to the main branch
+
+jobs:
+  deploy:
+    name: Build and Deploy to EKS
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Pull down a copy of your repository files onto the GitHub automation runner
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    # 2. Log securely into your AWS account using your repository secrets
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    # 3. Authenticate Docker with your private AWS ECR Registry
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    # 4. Build, Tag, and Push your code as a fresh Docker image
+    - name: Build, Tag, and Push Image to ECR
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: new-app-repo # 👈 Replace with your actual ECR Repository name
+        IMAGE_TAG: ${{ github.sha }} # Uses the unique Git commit ID as the version tag
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+    # 5. Connect to your EKS cluster
+    - name: Update Kubeconfig for EKS
+      run: |
+        aws eks update-kubeconfig --name Demo-cluster --region ${{ secrets.AWS_REGION }}
+
+    # 6. Set up the Helm CLI tool on the runner
+    - name: Set up Helm
+      uses: azure/setup-helm@v4
+      with:
+        version: 'v3.12.0'
+
+    # 7. Execute the Upgrade using the freshly built container version!
+    - name: Deploy Chart to EKS via Helm
+      run: |
+        helm upgrade --install node-release ./my-node-stack \
+          --namespace default \
+          --set app.image="${{ steps.login-ecr.outputs.registry }}/new-app-repo:${{ github.sha }}"

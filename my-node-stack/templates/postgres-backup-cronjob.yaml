@@ -1,0 +1,63 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-s3-backup
+  namespace: default
+spec:
+  # Run every night at midnight (00:00)
+  schedule: "0 0 * * *" 
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: db-backup
+            image: schickling/postgres-backup-s3:latest
+            env:
+              # 1. Point host, user, and db directly to your existing ConfigMap
+              - name: PGHOST
+                valueFrom:
+                  configMapKeyRef:
+                    name: app-config
+                    key: DB_HOST
+              - name: PGUSER
+                valueFrom:
+                  configMapKeyRef:
+                    name: app-config
+                    key: DB_USER
+              - name: PGDATABASE
+                valueFrom:
+                  configMapKeyRef:
+                    name: app-config
+                    key: DB_NAME
+              
+              # 2. Point password directly to your existing app-secret
+              - name: PGPASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: app-secret
+                    key: DB_PASSWORD
+              
+              # AWS S3 Configurations
+              - name: S3_BUCKET
+                value: "festus-eks-postgres-backups-2026"
+              - name: AWS_DEFAULT_REGION
+                value: "eu-west-1" 
+            command: ["/bin/sh", "-c"]
+            args:
+              - |
+                set -e
+                BACKUP_FILE="backup-$(date +%Y%m%d-%H%M%S).sql.gz"
+                echo "Starting database dump from host ${PGHOST}..."
+                
+                # Execute the dump and compress
+                pg_dump -h "${PGHOST}" -U "${PGUSER}" -d "${PGDATABASE}" | gzip > /tmp/${BACKUP_FILE}
+                
+                echo "Uploading ${BACKUP_FILE} to S3 bucket ${S3_BUCKET}..."
+                aws s3 cp /tmp/${BACKUP_FILE} "s3://${S3_BUCKET}/db-backups/${BACKUP_FILE}"
+                
+                echo "Backup successfully uploaded!"
+          restartPolicy: OnFailure

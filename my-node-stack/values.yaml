@@ -1,0 +1,62 @@
+# Configuration for the Node App
+app:
+  replicaCount: 2
+  image: "festusgreat/newapp:6.0"
+  containerPort: 3000
+  servicePort: 80
+
+# Configuration for the Postgres DB
+postgres:
+  replicaCount: 1
+  image: "postgres:14"
+  containerPort: 5432
+
+# Shared Database Connection details
+database:
+  host: "postgres-service"
+  name: "mydb"
+  user: "myuser"
+  password: "mypass"
+
+#adding pvc to persist data
+storage:
+  size: 1Gi
+  mountPath: /var/lib/postgresql/data
+  
+  # Backup Configuration
+backup:
+  enabled: true
+  schedule: "0 0 * * *"
+  image: "schickling/postgres-backup-s3:latest"
+  s3Bucket: "festus-eks-postgres-backups-2026"
+  region: "eu-west-1"
+  roleArn:  # Backup Configuration
+backup:
+  enabled: true
+  schedule: "0 0 * * *"
+  image: "schickling/postgres-backup-s3:latest"
+  s3Bucket: "festus-eks-postgres-backups-2026"
+  region: "eu-west-1"
+  roleArn:  # Backup Configuration
+backup:
+  enabled: true
+  schedule: "0 0 * * *"
+  image: "schickling/postgres-backup-s3:latest"
+  s3Bucket: "festus-eks-postgres-backups-2026"
+  region: "eu-west-1"
+  roleArn: "arn:aws:iam::052717076128:role/eks-postgres-backup-role"
+  historyLimit:
+    success: 3
+    failed: 5
+  historyLimit:
+    success: 3
+    failed: 5
+  historyLimit:
+    success: 3
+    failed: 5
+    
+
+# Ingress Routing Configuration
+ingress:
+  enabled: true
+  host: "globalconnettravel.co.uk" # In a production cloud setup, this would be your true registered domain name.
