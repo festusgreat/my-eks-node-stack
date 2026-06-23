@@ -1,9 +1,18 @@
 FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install --only=production
-COPY . .
-EXPOSE 3000
-CMD ["node", "app.js"]
 
+# Set the working directory inside the container
+WORKDIR /app
+
+# Copy lockfiles over first
+COPY package*.json ./
+
+# Clean cache and install production-only dependencies using the modern flag
+RUN npm cache clean --force && npm install --omit=dev
+
+# Copy the rest of your application code
+COPY . .
+
+EXPOSE 3000
+
+CMD ["node", "app.js"]
 
