@@ -1,3 +1,4 @@
+#fresh pipeline trigger
 FROM node:18-alpine
 
 # Set the working directory inside the container
