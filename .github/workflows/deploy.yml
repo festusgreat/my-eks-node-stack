@@ -25,7 +25,7 @@ jobs:
     # install dependencies and run the testing 
     - name: Run application/code tesing 
       run: |
-        npm ci
+        npm npm install --no-audit --no-fund # 👈 Changed from 'npm ci' to allow on-the-fly lockfile generation
         npm test
 
 
