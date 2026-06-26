@@ -14,6 +14,22 @@ jobs:
     # 1. Pull down a copy of your repository files onto the GitHub automation runner
     - name: Checkout Code
       uses: actions/checkout@v4
+    
+    # Set up node.js environment on the runner
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node_version: '18'
+        cache: 'npm'
+
+    # install dependencies and run the testing 
+    - name: Run application/code tesing 
+      run: |
+        npm ci
+        npm test
+
+
+
 
     # 2. Log securely into your AWS account using your repository secrets
     - name: Configure AWS Credentials
