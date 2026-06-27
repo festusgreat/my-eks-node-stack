@@ -62,11 +62,13 @@ jobs:
       - name: Update Kubeconfig
         run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
 
+      # Deploys completely isolated into the "staging" namespace
       - name: Deploy to Staging Namespace via Helm
         run: |
-          helm upgrade --install new-app-staging ./my-node-stack  \
+          helm upgrade --install new-app-staging ./my-node-stack \
             --namespace staging --create-namespace \
-            --set app.secretDbPassword="${{ env.DB_PASSWORD }}"
+            --set app.secretDbPassword="${{ env.DB_PASSWORD }}" \
+            --set ingress.host="staging.globalconnettravel.co.uk"
 
   # ----------------------------------------
   # JOB 3: Secure Production Deployment
@@ -74,7 +76,7 @@ jobs:
   deploy-production:
     needs: deploy-staging
     runs-on: ubuntu-latest
-    environment: production # Triggers the manual approval UI checkpoint
+    environment: production # Triggers the manual approval UI checkpoint in GitHub
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -100,8 +102,10 @@ jobs:
       - name: Update Kubeconfig
         run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
 
+      # Deploys safely into the "production" namespace using your main domain name
       - name: Deploy to Production Namespace via Helm
         run: |
-          helm upgrade --install new-app-prod . \
+          helm upgrade --install new-app-prod ./my-node-stack \
             --namespace production --create-namespace \
-            --set app.secretDbPassword="${{ env.DB_PASSWORD }}"
+            --set app.secretDbPassword="${{ env.DB_PASSWORD }}" \
+            --set ingress.host="globalconnettravel.co.uk"
