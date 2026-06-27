@@ -4,6 +4,8 @@ FROM node:18-alpine
 # Set the working directory inside the container
 WORKDIR /app
 
+RUN apk update && apk upgrade --no-cache
+
 # Copy lockfiles over first
 COPY package*.json ./
 
