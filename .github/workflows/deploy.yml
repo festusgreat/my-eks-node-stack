@@ -105,7 +105,7 @@ jobs:
       # Deploys safely into the "production" namespace using your main domain name
       - name: Deploy to Production Namespace via Helm
         run: |
-          helm upgrade --install new-app-prod ./my-node-stack \
-            --namespace production --create-namespace \
+          helm upgrade --install node-release ./my-node-stack \
+            --namespace default --create-namespace \
             --set app.secretDbPassword="${{ env.DB_PASSWORD }}" \
             --set ingress.host="globalconnettravel.co.uk"
