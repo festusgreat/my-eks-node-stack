@@ -92,5 +92,5 @@ jobs:
         aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name Demo-cluster
         # Ensure your local directory context or repo path matches your helm structure
         helm upgrade --install node-release ./my-node-stack \
-          --set app.image=$ECR_REGISTRY/$ECR_REPOSITORY \
-          --set app.tag=$IMAGE_TAG
+          --set image.repository=$ECR_REGISTRY/$ECR_REPOSITORY \
+          --set image.tag=$IMAGE_TAG
