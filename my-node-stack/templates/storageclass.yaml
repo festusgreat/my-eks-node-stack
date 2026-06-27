@@ -1,9 +1,0 @@
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: ebs-gp3
-provisioner: ebs.csi.aws.com # 👈 Uses your healthy 6/6 driver!
-volumeBindingMode: Immediate  # 👈 Force AWS to build the drive immediately!
-allowVolumeExpansion: true
-parameters:
-  type: gp3 # 👈 Uses newer, cheaper, faster AWS gp3 volumes
