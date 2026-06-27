@@ -1,4 +1,4 @@
-name: Deploy Application to EKS
+name: Multi-Environment Deployment Pipeline
 
 on:
   push:
@@ -6,12 +6,14 @@ on:
       - main
 
 env:
-  VAULT_URL: "http://3.90.231.105:8200" # Replace with your EC2's Public IP or Public DNS
+  VAULT_URL: "http://3.90.231.105:8200" # Your EC2 Vault URL
   EKS_CLUSTER_NAME: "Demo-cluster"
-  AWS_REGION: "us-east-1" # Replace with your actual AWS region
+  AWS_REGION: "us-east-1"
 
 jobs:
-  # JOB 1: Build and Run Security Scans
+  # ----------------------------------------
+  # JOB 1: Build, Test, and Security Scan
+  # ----------------------------------------
   build-and-test:
     runs-on: ubuntu-latest
     steps:
@@ -23,30 +25,61 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Simulated Build and Test Steps
+      - name: Build & Test Artifacts
         run: |
-          echo "Building application artifacts..."
-          echo "Running unit tests... All passed!"
+          echo "Building application..."
+          echo "Running unit tests... Passed!"
 
-  # JOB 2: Manual Checkpoint Gate
-  approval-gate:
+  # ----------------------------------------
+  # JOB 2: Automated Staging Deployment
+  # ----------------------------------------
+  deploy-staging:
     needs: build-and-test
     runs-on: ubuntu-latest
-    environment: production # Requires manual approval in GitHub UI
-    steps:
-      - name: Approved
-        run: echo "Deployment approved by operator."
-
-  # JOB 3: Secure Automated Deployment
-  deploy:
-    needs: approval-gate
-    runs-on: ubuntu-latest
+    environment: staging
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 1. Fetch Dynamic Secrets Straight From Your EC2 Vault Container
-      - name: Retrieve Secrets from HashiCorp Vault
+      - name: Fetch Staging Secrets from Vault
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ env.VAULT_URL }}
+          method: token
+          token: ${{ secrets.VAULT_TOKEN }}
+          secrets: |
+            secret/data/staging/database password | DB_PASSWORD ;
+            secret/data/production/aws access_key_id | VAULT_AWS_KEY_ID ;
+            secret/data/production/aws secret_access_key | VAULT_AWS_SECRET_ACCESS_KEY ;
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ env.VAULT_AWS_KEY_ID }}
+          aws-secret-access-key: ${{ env.VAULT_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update Kubeconfig
+        run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+
+      - name: Deploy to Staging Namespace via Helm
+        run: |
+          helm upgrade --install new-app-staging . \
+            --namespace staging --create-namespace \
+            --set app.secretDbPassword="${{ env.DB_PASSWORD }}"
+
+  # ----------------------------------------
+  # JOB 3: Secure Production Deployment
+  # ----------------------------------------
+  deploy-production:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: production # Triggers the manual approval UI checkpoint
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Fetch Production Secrets from Vault
         uses: hashicorp/vault-action@v3
         with:
           url: ${{ env.VAULT_URL }}
@@ -57,7 +90,6 @@ jobs:
             secret/data/production/aws access_key_id | VAULT_AWS_KEY_ID ;
             secret/data/production/aws secret_access_key | VAULT_AWS_SECRET_ACCESS_KEY ;
 
-      # 2. Authenticate to AWS using the Vault-retrieved keys
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -65,13 +97,11 @@ jobs:
           aws-secret-access-key: ${{ env.VAULT_AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # 3. Update Kubeconfig context for EKS communication
       - name: Update Kubeconfig
-        run: |
-          aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+        run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
 
-      # 4. Inject Vault's DB_PASSWORD directly into your cluster using Helm
-      - name: Deploy Application with Helm
+      - name: Deploy to Production Namespace via Helm
         run: |
-          helm upgrade --install node-release ./my-node-stack \
+          helm upgrade --install new-app-prod . \
+            --namespace production --create-namespace \
             --set app.secretDbPassword="${{ env.DB_PASSWORD }}"
