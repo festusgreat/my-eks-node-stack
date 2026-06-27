@@ -68,7 +68,7 @@ jobs:
       with:
         image-ref: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
         format: 'table'
-        exit-code: '0' # Fails the pipeline if critical/high items are found
+        exit-code: '1' # Fails the pipeline if critical/high items are found
         ignore-unfixed: true
         vuln-type: 'os,library'
         severity: 'CRITICAL,HIGH'
