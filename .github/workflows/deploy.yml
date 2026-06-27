@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  VAULT_URL: "http://3.90-231-105.compute-1.amazonaws.com:8200" # Replace with your EC2's Public IP or Public DNS
+  VAULT_URL: "http://3.90.231.105:8200" # Replace with your EC2's Public IP or Public DNS
   EKS_CLUSTER_NAME: "Demo-cluster"
   AWS_REGION: "us-east-1" # Replace with your actual AWS region
 
