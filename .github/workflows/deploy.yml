@@ -87,6 +87,9 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         IMAGE_TAG: ${{ github.sha }}
       run: |
+
+        # 1. Dynamically generate the kubeconfig for your EKS cluster 👈 ADD THIS LINE
+        aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name my-eks-cluster
         # Ensure your local directory context or repo path matches your helm structure
         helm upgrade --install node-release ./my-node-stack \
           --set app.image=$ECR_REGISTRY/$ECR_REPOSITORY \
