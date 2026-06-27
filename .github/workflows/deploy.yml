@@ -73,5 +73,5 @@ jobs:
       # 4. Inject Vault's DB_PASSWORD directly into your cluster using Helm
       - name: Deploy Application with Helm
         run: |
-          helm upgrade --install new-app . \
+          helm upgrade --install node-release ./my-node-stack \
             --set app.secretDbPassword="${{ env.DB_PASSWORD }}"
