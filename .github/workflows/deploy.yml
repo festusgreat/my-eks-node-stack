@@ -64,7 +64,7 @@ jobs:
 
       - name: Deploy to Staging Namespace via Helm
         run: |
-          helm upgrade --install node-release ./my-node-stack  \
+          helm upgrade --install new-app-staging .  \
             --namespace staging --create-namespace \
             --set app.secretDbPassword="${{ env.DB_PASSWORD }}"
 
