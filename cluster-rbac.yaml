@@ -1,0 +1,49 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: staging
+  name: pipeline-deployer-role
+rules:
+  - apiGroups: ["", "apps", "networking.k8s.io", "batch"]
+    resources: ["deployments", "services", "ingresses", "cronjobs", "configmaps", "secrets", "persistentvolumeclaims", "pods"]
+    verbs: ["*"] # Full management within staging for seamless testing
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: staging
+  name: pipeline-deployer-binding
+subjects:
+  - kind: User
+    name: github-actions-pipeline # The identity your workflow will assume
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: pipeline-deployer-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: default
+  name: production-deployer-role
+rules:
+  - apiGroups: ["", "apps", "networking.k8s.io", "batch"]
+    resources: ["deployments", "services", "ingresses", "cronjobs", "configmaps", "secrets", "persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"] # Restricted: Cannot execute destructive global deletes
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: default
+  name: production-deployer-binding
+subjects:
+  - kind: User
+    name: github-actions-pipeline
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: production-deployer-role
+  apiGroup: rbac.authorization.k8s.io
+
+

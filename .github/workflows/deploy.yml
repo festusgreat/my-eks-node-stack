@@ -59,6 +59,9 @@ jobs:
           aws-secret-access-key: ${{ env.VAULT_AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Get Pipeline Identity
+        run: aws sts get-caller-identity
+
       - name: Update Kubeconfig
         run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
 
