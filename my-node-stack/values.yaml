@@ -59,4 +59,4 @@ backup:
 # Ingress Routing Configuration
 ingress:
   enabled: true
-  host: "globalconnettravel.co.uk" # In a production cloud setup, this would be your true registered domain name.
+  host: "staging.globalconnettravel.co.uk" # In a production cloud setup, this would be your true registered domain name.
